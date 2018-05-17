@@ -39,11 +39,12 @@ def geraTableauInicial(args):
 				else:
 					sinal.append(parse[n])
 			else:
-				b.append(float(float(parse[n+1])))
+				b.append(float(parse[n+1]))
 				sinal.append(parse[n])
 
 
 		contArtf = 0
+		faseUm = False
 		for i in xrange(m):
 			criou = False
 			if(sinal[i] == "<="):
@@ -62,6 +63,7 @@ def geraTableauInicial(args):
 
 		for i in xrange(m):
 			if(sinal[i] == ">="):
+				faseUm = True
 				r[i].append(1.0)
 				z.append(0.0)
 				za.append(-1.0)
@@ -72,28 +74,34 @@ def geraTableauInicial(args):
 				contArtf-=1
 	
 		tableau = []
-		for i in xrange(m+2):
-			tableau.append([])
-			tableau[i].append(b[i])
+		
+		if faseUm:
+			for i in xrange(m+2):
+				tableau.append([])
+				tableau[i].append(b[i])
 
-		for i in xrange(len(za)):
-			tableau[0].append(za[i])
-			tableau[1].append(z[i])
+			for i in xrange(len(za)):
+				tableau[0].append(za[i])
+				tableau[1].append(z[i])
 
-		for i in xrange(m):
-			tableau[i+2] += (r[i])
+			for i in xrange(m):
+				tableau[i+2] += (r[i])
+		else:
+			b = b[1:]
+			for i in xrange(m+1):
+				tableau.append([])
+				tableau[i].append(b[i])
+			for i in xrange(len(z)):
+				tableau[0].append(z[i])
+
+			for i in xrange(m):
+				tableau[i+1] += (r[i])
 
 		print "Tableau inicial:"
 		print np.matrix(tableau)
 		print ""
 
-		return tableau, m, n
-
-def verificaZa(tableau, cont):
-	for i in xrange(cont):
-		if(tableau[len(tableau)-1-i] != -1):
-			return False
-	return True
+		return tableau, m, n, faseUm
 
 def verificaZ(tableau):
 	for i in xrange(len(tableau)):
@@ -101,18 +109,67 @@ def verificaZ(tableau):
 			return False
 	return True
 
-def simplexDuasFases(args):
-	tableau, m, n = geraTableauInicial(args)
-	contArtf = tableau[0].count(-1)
-
-	for i in xrange(contArtf):
-		tableau[0] = np.add(tableau[0], tableau[m+1-i])
-
-	while not verificaZa(tableau[0], contArtf):
+def simplex(tableau, m, n):
+	qtdFolga = len(tableau[0])-n-1
+	nQuadro = 1
+	while not verificaZ(tableau[0]):
+		print "Quadro " + str(nQuadro) + ":"
 		print np.matrix(tableau)
 		print ""
+		nQuadro += 1
 
-		pivoj, = np.unravel_index(tableau[0].argmax(), tableau[0].shape)
+		pivoj = np.argmax(tableau[0])
+
+		divisoes = np.full(m, float("Inf"))
+
+		for i in xrange(1, m+1):
+			if(tableau[i][pivoj] > 0):
+				divisoes[i-1] = tableau[i][0]/tableau[i][pivoj]
+
+		pivoi = np.argmin(divisoes)
+
+		if np.count_nonzero(divisoes == float("Inf")) == len(divisoes):
+			print "break", pivoi+1, pivoj
+			break
+
+		for i in xrange(len(tableau[0])):
+			tableau[pivoi+1] = [x/tableau[pivoi+1][pivoj] for x in tableau[pivoi+1]]
+
+		for i in xrange(m+1):
+			if i!=pivoi+1:
+				tableau[i] = np.subtract(tableau[i], [tableau[i][pivoj]*x for x in tableau[pivoi+1]])
+
+	print "Quadro final da 2ª fase:"
+	print np.matrix(tableau)
+	print ""
+
+def verificaZa(tableau, cont):
+	for i in xrange(cont):
+		if(tableau[len(tableau)-1-i] != -1):
+			return False
+	return True
+
+def ajustaMatriz(tableau, m):
+	tableau = tableau[1:]
+	for i in xrange(m+1):
+		tableau[i] = tableau[i][:-1]
+	return tableau
+
+def simplexDuasFases(tableau, m, n):
+	contArtf = tableau[0].count(-1)
+
+	for i in (m-1, 1, -1):
+		if (tableau[i][-1] == 1):
+			tableau[0] = np.add(tableau[0], tableau[i])
+
+	nQuadro = 1
+	while not verificaZa(tableau[0], contArtf):
+		print "Quadro " + str(nQuadro) + ":"
+		print np.matrix(tableau)
+		print ""
+		nQuadro += 1
+
+		pivoj = np.argmax(tableau[0])
 
 		divisoes = np.full(m, float("Inf"))
 
@@ -120,7 +177,7 @@ def simplexDuasFases(args):
 			if(tableau[i][pivoj] > 0):
 				divisoes[i-2] = tableau[i][0]/tableau[i][pivoj]
 
-		pivoi, = np.unravel_index(divisoes.argmin(), divisoes.shape)
+		pivoi = np.argmin(divisoes)
 
 		if np.count_nonzero(divisoes == float("Inf")) == len(divisoes):
 			print "break", pivoi+2, pivoj
@@ -133,13 +190,20 @@ def simplexDuasFases(args):
 			if i!=pivoi+2:
 				tableau[i] = np.subtract(tableau[i], [tableau[i][pivoj]*x for x in tableau[pivoi+2]])
 
+	print "Quadro final da 1ª fase:"
+	tableau = ajustaMatriz(tableau, m)
 	print np.matrix(tableau)
-
+	print ""
+	simplex(tableau, m, n)
 
 
 def main(args):
 	np.set_printoptions(precision=4)
-	simplexDuasFases(args)
+	tableau, m, n, faseUm = geraTableauInicial(args)
+	if faseUm:
+		simplexDuasFases(tableau, m, n)
+	else:
+		simplex(tableau, m, n)
 
 if __name__ == '__main__':
 	main(sys.argv)
