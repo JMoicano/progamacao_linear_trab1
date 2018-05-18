@@ -198,7 +198,7 @@ def simplexDuasFases(tableau, m, n):
 
 
 def main(args):
-	np.set_printoptions(precision=4)
+	np.set_printoptions(precision=2)
 	tableau, m, n, faseUm = geraTableauInicial(args)
 	if faseUm:
 		simplexDuasFases(tableau, m, n)
