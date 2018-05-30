@@ -3,6 +3,8 @@
 import sys
 import numpy as np
 
+# tratar B NEGATIVO
+
 def geraTableauInicial(args):
 	with open(args[1], "r+") as file:
 		limite = file.readline().strip()
@@ -107,10 +109,22 @@ def geraTableauInicial(args):
 		return tableau, m, n, faseUm
 
 def verificaZ(tableau):
-	for i in xrange(len(tableau)):
+	for i in xrange(1, len(tableau)):
 		if(tableau[i] > 0):
 			return False
 	return True
+
+def verificaBase(tableau, j, m):
+	cont0=0
+	cont1=0
+	bi = -1
+	for i in xrange(m+1):
+		if(tableau[i][j] == 0):
+			cont0+=1
+		elif(tableau[i][j] == 1):
+			cont1+=1
+			bi = i
+	return (cont1+cont0 == m+1), bi if (cont1==1) else -1
 
 def simplex(tableau, m, n):
 	qtdFolga = len(tableau[0])-n-1
@@ -121,7 +135,12 @@ def simplex(tableau, m, n):
 		print ""
 		nQuadro += 1
 
-		pivoj = np.argmax(tableau[0])
+		pivoj = np.argmax(tableau[0][1:])
+		pivoj+=1
+
+		if(tableau[0][pivoj] <= 0):
+			print "Não possui solução"
+			return
 
 		divisoes = np.full(m, float("Inf"))
 
@@ -132,14 +151,15 @@ def simplex(tableau, m, n):
 		pivoi = np.argmin(divisoes)
 
 		if np.count_nonzero(divisoes == float("Inf")) == len(divisoes):
-			print "Infinitas soluções"
+			print "Não possui solução"
+			print "Z = Inf"
 			return
 
 		for i in xrange(len(tableau[0])):
 			tableau[pivoi+1] = [x/tableau[pivoi+1][pivoj] for x in tableau[pivoi+1]]
 
 		for i in xrange(m+1):
-			if i!=pivoi+1:
+			if i!=(pivoi+1):
 				tableau[i] = np.subtract(tableau[i], [tableau[i][pivoj]*x for x in tableau[pivoi+1]])
 
 	print "Quadro final da 2ª fase:"
@@ -155,15 +175,27 @@ def simplex(tableau, m, n):
 
 	if degenerada:
 		print "Solução degenerada"
-	print "z*= ", "%0.3f" % tableau[0][0]
-	print "x*= ",
-	for j in xrange(1, len(tableau[0])):
-		if(tableau[0][j] == 0):
-			for i in xrange(1, m+1):
-				if(tableau[i][j] == 1):
-					print "%0.3f" % tableau[i][0], " ",
-		else:
-			print 0, " ",
+	if (np.count_nonzero(tableau[0] == 0) > m):
+		print "Solução multipla"
+		print "z*= ", "%0.3f" % tableau[0][0]
+		print "x*= ",
+		for j in xrange(1, len(tableau[0])):
+			verif, i = verificaBase(tableau, j, m)
+			if(verif):
+				print "%0.3f" % tableau[i][0], " ",
+			else:
+				print 0.0, " ",
+	else:
+		print "Solução única"
+		print "z*= ", "%0.3f" % tableau[0][0]
+		print "x*= ",
+		for j in xrange(1, len(tableau[0])):
+			if(tableau[0][j] == 0):
+				for i in xrange(1, m+1):
+					if(tableau[i][j] == 1):
+						print "%0.3f" % tableau[i][0], " ",
+			else:
+				print 0.0, " ",
 
 
 def verificaZa(tableau, cont):
@@ -172,10 +204,10 @@ def verificaZa(tableau, cont):
 			return False
 	return True
 
-def ajustaMatriz(tableau, m):
+def ajustaMatriz(tableau, m, contArtf):
 	tableau = tableau[1:]
 	for i in xrange(m+1):
-		tableau[i] = tableau[i][:-1]
+		tableau[i] = tableau[i][:-contArtf]
 	return tableau
 
 def simplexDuasFases(tableau, m, n):
@@ -196,10 +228,11 @@ def simplexDuasFases(tableau, m, n):
 		print ""
 		nQuadro += 1
 
-		pivoj = np.argmax(tableau[0])
+		pivoj = np.argmax(tableau[0][1:])
+		pivoj+=1
 
 		if(tableau[0][pivoj] <= 0):
-			print "Infinitas soluções"
+			print "Não possui solução"
 			return
 
 		divisoes = np.full(m, float("Inf"))
@@ -211,18 +244,19 @@ def simplexDuasFases(tableau, m, n):
 		pivoi = np.argmin(divisoes)
 
 		if np.count_nonzero(divisoes == float("Inf")) == len(divisoes):
-			print "Infinitas soluções"
+			print "Não possui solução"
+			print "Z = Inf"
 			return
 
 		for i in xrange(len(tableau[0])):
-			tableau[pivoi+2] = [x/tableau[pivoi+2][pivoj] for x in tableau[pivoi+2]]
+			tableau[pivoi+2] = [float(x/tableau[pivoi+2][pivoj]) for x in tableau[pivoi+2]]
 
 		for i in xrange(m+2):
-			if i!=pivoi+2:
+			if i!=(pivoi+2):
 				tableau[i] = np.subtract(tableau[i], [tableau[i][pivoj]*x for x in tableau[pivoi+2]])
 
 	print "Quadro final da 1ª fase:"
-	tableau = ajustaMatriz(tableau, m)
+	tableau = ajustaMatriz(tableau, m, contArtf)
 	print np.matrix(tableau)
 	print ""
 	simplex(tableau, m, n)
