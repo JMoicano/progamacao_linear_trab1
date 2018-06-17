@@ -31,8 +31,7 @@ def geraTableauInicial(args):
 			for j in xrange(n):
 				r[i].append(float(parse[j]))
 
-			if(float(parse[n+1]) < 0):
-				print "&&&&&&&&&&"
+			if(parse[n+1] < 0):
 				b.append(-1*float(parse[n+1]))
 				r[i] = [-1*x for x in r[i]]
 				if(parse[n] == "<="):
@@ -115,17 +114,17 @@ def verificaZ(tableau):
 			return False
 	return True
 
-def verificaBase(tableau, j, m, mod):
+def verificaBase(tableau, j, m):
 	cont0=0
 	cont1=0
 	bi = -1
-	for i in xrange(m+mod):
+	for i in xrange(m+1):
 		if(tableau[i][j] == 0):
 			cont0+=1
 		elif(tableau[i][j] == 1):
 			cont1+=1
 			bi = i
-	return (cont1+cont0 == m+mod), bi if (cont1==1) else -1
+	return (cont1+cont0 == m+1), bi if (cont1==1) else -1
 
 def simplex(tableau, m, n):
 	qtdFolga = len(tableau[0])-n-1
@@ -140,7 +139,7 @@ def simplex(tableau, m, n):
 		pivoj+=1
 
 		if(tableau[0][pivoj] <= 0):
-			print "Não possui solução"
+			print "conjunto de solucoes viaveis vazio"
 			return
 
 		divisoes = np.full(m, float("Inf"))
@@ -152,8 +151,8 @@ def simplex(tableau, m, n):
 		pivoi = np.argmin(divisoes)
 
 		if np.count_nonzero(divisoes == float("Inf")) == len(divisoes):
-			print "Não possui solução"
-			print "Z = Inf"
+			print "conjunto de solucoes viaveis vazio"
+			print "z -> infinito"
 			return
 
 		for i in xrange(len(tableau[0])):
@@ -179,24 +178,26 @@ def simplex(tableau, m, n):
 	if (np.count_nonzero(tableau[0] == 0) > m):
 		print "Solução multipla"
 		print "z*= ", "%0.3f" % tableau[0][0]
-		print "x*= ",
+		print "x*= (", 
 		for j in xrange(1, len(tableau[0])):
-			verif, i = verificaBase(tableau, j, m, 1)
+			verif, i = verificaBase(tableau, j, m)
 			if(verif):
-				print "%0.3f" % tableau[i][0], " ",
+				print "%0.3f" % tableau[i][0], " " if j == len(tableau[0]) -1 else ", ",
 			else:
-				print 0.0, " ",
+				print 0.0, " " if j == len(tableau[0]) -1 else ", ",
+		print ")"
 	else:
 		print "Solução única"
 		print "z*= ", "%0.3f" % tableau[0][0]
-		print "x*= ",
+		print "x*= (", 
 		for j in xrange(1, len(tableau[0])):
 			if(tableau[0][j] == 0):
 				for i in xrange(1, m+1):
 					if(tableau[i][j] == 1):
-						print "%0.3f" % tableau[i][0], " ",
+						print "%0.3f" % tableau[i][0], " " if j == len(tableau[0]) -1 else ", ",
 			else:
-				print 0.0, " ",
+				print 0.0, " " if j == len(tableau[0]) -1 else ", ",
+		print ")"
 
 
 def verificaZa(tableau, cont):
@@ -232,38 +233,21 @@ def simplexDuasFases(tableau, m, n):
 		pivoj = np.argmax(tableau[0][1:])
 		pivoj+=1
 
-		divisoes = np.full(m, float("Inf"))
-		pivoi = np.argmin(divisoes)
-
-		algumNaBase = False
 		if(tableau[0][pivoj] <= 0):
-			for x in xrange(-contArtf, 0, 1):
-				tanabase, i = verificaBase(tableau, x, m, 2)
-				algumNaBase = algumNaBase or tanabase
-				if algumNaBase:
-					pivoi = i - 2
-					for y in xrange(len(tableau[0])-contArtf-1, 1, -1):
-						tanabase, gfds= verificaBase(tableau, y, m, 2)
-						if (not tanabase):
-							pivoj = y
-							break
+			print "conjunto de solucoes viaveis vazio"
+			return
 
-					break
-			if not algumNaBase:
-				print "Não possui solução"
-				return
-
-		print pivoi+2, pivoj, algumNaBase
-		print
+		divisoes = np.full(m, float("Inf"))
 
 		for i in xrange(2, m+2):
-			if((tableau[i][pivoj] > 0 or algumNaBase) and tableau[i][pivoj]):
+			if(tableau[i][pivoj] > 0):
 				divisoes[i-2] = tableau[i][0]/tableau[i][pivoj]
 
+		pivoi = np.argmin(divisoes)
 
 		if np.count_nonzero(divisoes == float("Inf")) == len(divisoes):
-			print "Não possui solução"
-			print "Z = Inf"
+			print "conjunto de solucoes viaveis vazio"
+			print "z -> infinito"
 			return
 
 		for i in xrange(len(tableau[0])):
